@@ -1,0 +1,20 @@
+PREDEF:
+  - predef.re
+
+CHAPS:
+  - lib-and-bin.re
+# - makefile.re
+# - semver.re
+# - test.re
+# - documentation.re
+# - vendoring.re
+# - benchmark.re
+# - multiplatform.re
+# - path-filepath.re
+# - dont-use-panic.re
+
+APPENDIX:
+
+POSTDEF:
+  - postdef.re
+
