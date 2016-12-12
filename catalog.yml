@@ -3,11 +3,12 @@ PREDEF:
 
 CHAPS:
   - lib-and-bin.re
-# - makefile.re
+  - makefile.re
+  - platform.re
+  - better-go-code.re
 # - semver.re
 # - test.re
 # - documentation.re
-# - vendoring.re
 # - benchmark.re
 # - multiplatform.re
 # - path-filepath.re
