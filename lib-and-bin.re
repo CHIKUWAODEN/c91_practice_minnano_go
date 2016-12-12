@@ -19,7 +19,7 @@
 ごらんのように、全てのファイルがパッケージのソースディレクトリの直下に置かれる形になっており、すべてmainパッケージに属する形となっています。
 
 
-//cmd{
+//emlist[改修前のレイアウト]{
 ./
 ├── Gomfile
 ├── README.md
@@ -68,7 +68,8 @@ fodの場合、ライブラリを主な成果物として提供しつつ、も�
 今回はバイナリをこれまでどおりfodとしたいので、@<code>{$GOPATH/src/github.com/ykanda/fod/cmd/fod}というディレクトリを作成します。
 ここに、fod.goを移します。
 
-//cmd{
+
+//emlist[バイナリコマンド用にコードを切り分ける]{
 $ cd $GOPATH/src/github.com/ykanda/fod
 $ mkdir -p cmd/fod
 $ git mv ./fod.go ./cmd/fod/fod.go
@@ -80,6 +81,7 @@ Changes to be committed:
 
         renamed:    fod.go -> cmd/fod/fod.go
 //}
+
 
 == パッケージ名の修正
 
