@@ -19,21 +19,34 @@
 \renewcommand{\sfdefault}{phv}
 
 %% for listings
-%\renewcommand{\lstlistingname}{List}
-%\lstset{%
-%  breaklines=true,%
-%  breakautoindent=false,%
-%  breakindent=0pt,%
-%  fontadjust=true,%
-%  backgroundcolor=\color{shadecolor},%
-%  frame=single,%
-%  framerule=0pt,%
-%  basicstyle=\ttfamily\scriptsize,%
-%  commentstyle=\color{reviewgreen},%
-%  identifierstyle=\color{reviewblue},%
-%  stringstyle=\color{reviewred},%
-%  keywordstyle=\bfseries\color{reviewdarkred},%
-%}
+\usepackage{listings,jlisting}
+\renewcommand{\lstlistingname}{List}
+\lstset{%
+  breaklines=true,%
+  breakautoindent=false,%
+  breakindent=0pt,%
+  fontadjust=true,%
+  backgroundcolor=\color{shadecolor},%
+  frame=single,%
+  framerule=0pt,%
+  basicstyle=\ttfamily\scriptsize,%
+  commentstyle=\color{reviewgreen},%
+  identifierstyle=\color{reviewblue},%
+  stringstyle=\color{reviewred},%
+  keywordstyle=\bfseries\color{reviewdarkred},%
+  xrightmargin=1zw,%
+  xleftmargin=1zw,%
+  aboveskip=1.5em,%
+  belowcaptionskip=1.5em,%
+  belowskip=3em,%
+  tabsize=2,%
+}
 
 
 \sloppy
+
+
+
+\makeatletter
+\def\lst@title@dropdelim\hskip1zw{\if\lst@title\relax\vspace{1.5em}\fi}
+\makeatother

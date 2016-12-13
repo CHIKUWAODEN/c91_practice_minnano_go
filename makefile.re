@@ -343,8 +343,6 @@ fod version fod version c91-before revision 05e6ee6
 
 === help ターゲット
 
-
-
 ==={lint_and_fmt} lintおよびfmtターゲット
 
 lintターゲット、fmtターゲットはプログラムコードを検査したりフォーマットを整えたりするためのものです。
@@ -480,31 +478,73 @@ lintによる警告を避けるためだけの簡易な修正となっていま�
 
 === レシーバの名前
 
-次のエラーは
+「レシーバの名前にジェネリックな名前は使うな、その特性を反映した名前にしろ」ということのようです。
+「名前重要」というのはプログラマに広く認識されたベタープラクティスの一つというのは疑いのないものでしょうから、警告にしたがって修正してみましょう。
 
 
-//list[lint-receiver-name][]{
-context.go:11:1: receiver name should be a reflection of its identity; don't use generic names such as "me", "this", or "self"
+//list[lint-receiver-name][レシーバ名に関する警告]{
+selector.go:181:1: receiver name should be a reflection of its identity; don't use generic names such as "me", "this", or "self"
+//}
+
+
+たとえば、@<list>{move-cursor-up-before}関数はファイル選択カーソルの位置を変更するための関数です。
+
+
+//list[move-cursor-up-before][レシーバ名修正前の関数]{
+func (self *SelectorCommon) MoveCursorUp() {
+	if self.Cursor > 0 {
+		self.Cursor--
+	}
+}
+//}
+
+
+これを@<list>{move-cursor-up-after}のように修正しました。
+
+
+//list[move-cursor-up-after][レシーバ名修正後の関数]{
+func (selector *SelectorCommon) MoveCursorUp() {
+	if selector.Cursor > 0 {
+		selector.Cursor--
+	}
+}
+//}
+
+
+これまでのselfよりは冗長になりましたが、レシーバが具体的にどんなオブジェクトなのかということが具体的に分かりやすくなりました。
+また、直してみると分かるのですが、@<code>{self.Hoge}などと書くとオブジェクト自身のHogeなんだな、という風に見えてしまいますが、レシーバ名が具体的になることによって、そのフィールドは本当にそのレシーバに持たせるのが適当なのか？という不自然さに気づくことがあります。
+コードの良くないにおいに早期に気づけるようにするという意味で、レシーバの名前を具体的なものとすることは良いプラクティスといえるのではないでしょうか。
+
+
+//note{
+Go言語のソースコードを見ていると、十分に短い関数にシンプルな（時として一文字などもある）変数名を使うという風潮があるように思います。
+カルチャーとしては良いのですが、これが時たま好ましくない形であらわれているのを目にします。
+たとえば、省略することにこだわるあまり、意図を損ねかねない形になってしまっていることもあります（適当な名前付けで怒られている自分が言うのもおかしな話しですが）。
+
+*SelectorCommon型のレシーバの名前にselとつけるよりは、selectorと書いてしまった方が具体的だと思うのです。
+また、一文字単語も名前の重複が発生するような場合は少し気まずいことになってしまいます。
+同じスコープの中にselectorとswitcherという要素があった場合に、単純にsと略すと名前がかぶってしまいますね。
 //}
 
 
 === varキーワードによる変数宣言時の初期値　
 
-//list[][]{
+//list[lint-var-zero-value][]{
 entry.go:31:20: should drop = "" from declaration of var abs; it is the zero value
 //}
 
 
-=== 不要な型名の明記
+=== 不要な型名
 
-//list[][]{
+
+//list[lint-should-omit-type][]{
 filter_directory.go:8:21: should omit type *DirectoryFilter from declaration of var directoryFilter; it will be inferred from the right-hand side
 //}
 
 
-=== 不要なelseブロック
+=== return文とelse節のイディオム
 
-//list[][]{
+//list[lint-][else節に関する警告]{
 selector.go:313:9: if block ends with a return statement, so drop this else and outdent its block (move short variable declaration to its own line if necessary)
 termbox.go:37:9: if block ends with a return statement, so drop this else and outdent its block
 //}
@@ -512,13 +552,74 @@ termbox.go:37:9: if block ends with a return statement, so drop this else and ou
 
 === rangeを使ったループの冗長な記述
 
-//list[][]{
+Golangでコレクション的な要素（array,slice,mapなど）に対してfor文で横断的に処理を刷る場合、rangeを用います。
+rangeはキーまたはインデックスと値の二つの値を返し、それを受け取るときには@<code>{インデックス, 値 := range}などのように書きます（map型などの場合はインデックスはキーになります）。
+しかし、書き方によっては警告が発せられます。
+
+
+//list[lint-range-omit-2nd-value][forループで無視される値についての警告]{
 selector.go:364:9: should omit 2nd value from range; this loop is equivalent to `for i := range ...`
 //}
 
 
+このような場面で、値には用がないがインデックスを使いたい場合、値の部分は省略するのが良いそうです。
+全体的に、余計なものは書かないようにしようという方向で訂正される感じでしょうか。
+
+
+//list[lint-range-omit-2nd-value-diff][値を使わない場合にはわざわざアンダースコアを書かない]{
+ func (selector *SelectorCommon) SetItem(path string, index int) {
+-       for i, _ := range selector.Entries {
++       for i := range selector.Entries {
+                selector.Entries[i].Marked = false
+        }
+        entries := selector.GetEntries()
+//}
+
+
+Go言語をたしなんでいる人には言うまでもありませんが、インデックスは使わずに値のみを使いたい場合は@<code>{_, 値 := range}という形でインデックスを無視でき、このときはアンダースコアを省けません。
+
+
 === インクリメント演算子を使う
 
-//list[][]{
+インクリメント操作を行う場合には、複合代入演算子@<code>{+=}を用いるのではなく、インクリメント演算子を持ちいることが推奨されています。（@<list>{lint-should-replace-increment-op}）
+
+
+//list[lint-should-replace-increment-op][複合代入演算子を使うことによる警告]{
 termbox.go:29:30: should replace i += 1 with i++
 //}
+
+
+言われたままに、次のように修正します。
+まあ、こちらの方がシンプルでよりGoが是とするものに近いといったことなのでしょうか？
+
+
+//list[lint-should-replace-increment-op-diff][インクリメント文を使うよう修正する]{
+ func drawString(x int, y int, text string, fgColor termbox.Attribute, bgColor termbox.Attribute) {
+        runes := []rune(text)
+-       for i := 0; i < len(runes); i += 1 {
++       for i := 0; i < len(runes); i++ {
+                termbox.SetCell(x+i, y, runes[i], fgColor, bgColor)
+        }
+ }
+//}
+
+
+この違いの是非はともかくとして、この差分には意味合いの違いがあります。
+それは@<code>{+=}が演算子である一方、@<code>{++}は文（ステートメント）であるということです。
+@<code>{++}は「型を持たない定数1によってオペランドを加算する」という意味で解釈されます。
+しかし、実際に評価されると結果としては変わらないようです。@<fn>{why-use-inc-stmt}
+
+
+//footnote[why-use-inc-stmt][なんでこれが推奨されるか良く分からなくてオフィシャルを調べたけど結局良くわからなかったので誰か教えてください（時間がなくてひよってきてる）]
+
+
+== この章のまとめ
+
+本章ではプロジェクトの土台をつくり、ワークフローを規格化するといった事を行いました。
+また、それを実際に運用することでコードを是正していくという例にも触れました。
+
+Go言語はイデオマティックな言語で、その慣例に従うことが美徳とされます。
+go lintやgo vetによる検査にとどまらず、go fmtやgoimportsなどによるコードの書き換えすら行います。
+このスタイルの強要ともいうべき文化は、他の言語（とくにセミコロン言語）などから来た人には最初はアレルゲンになるかもしれません。
+まあでもやってるうちに気にならなくなりますし、Goに入らばGoに従えということでやるのがおすすめです。
+
