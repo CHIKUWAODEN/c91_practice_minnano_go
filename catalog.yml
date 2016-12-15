@@ -2,10 +2,10 @@ PREDEF:
   - predef.re
 
 CHAPS:
-  - lib-and-bin.re
-  - makefile.re
-  - platform.re
-  - better-go-code.re
+  - 1_lib-and-bin.re
+  - 2_makefile.re
+  - 3_platform.re
+  - 4_better-go-code.re
 # - semver.re
 # - test.re
 # - documentation.re
