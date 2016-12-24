@@ -72,8 +72,8 @@ Go言語では@<code>{path/filepath}パッケージの中で、ディレクト�
 
 //list[separator][パスとパスリスト区切り文字の定義]{
 const (
-	Separator     = os.PathSeparator
-	ListSeparator = os.PathListSeparator
+  Separator     = os.PathSeparator
+  ListSeparator = os.PathListSeparator
 )
 //}
 
@@ -102,11 +102,11 @@ fodのコマンドラインアプリ実装には@<code>{--base}というオプ�
 // Flags : options for urfave/cli
 var Flags = []cli.Flag{
   ...
-	cli.StringFlag{
-		Name:  "base, b",
-		Value: "./",
-		Usage: "base dir",
-	},
+  cli.StringFlag{
+    Name:  "base, b",
+    Value: "./",
+    Usage: "base dir",
+  },
   ...
 }
 //}
@@ -120,22 +120,22 @@ var Flags = []cli.Flag{
 //list[flag-base-after][修正後の--baseオプションの定義]{
 func flags() ([]cli.Flag, error) {
 
-	dir, err := os.Getwd()
-	if err != nil {
-		return nil, err
-	}
+  dir, err := os.Getwd()
+  if err != nil {
+    return nil, err
+  }
 
-	// Flags : options for urfave/cli
-	flags := []cli.Flag{
+  // Flags : options for urfave/cli
+  flags := []cli.Flag{
     ...
-		cli.StringFlag{
-			Name:  "base, b",
-			Value: dir,         // os.Getwd() で取得した値を使う
-			Usage: "base dir",
-		},
+    cli.StringFlag{
+      Name:  "base, b",
+      Value: dir,         // os.Getwd() で取得した値を使う
+      Usage: "base dir",
+    },
     ...
-	}
-	return flags, nil
+  }
+  return flags, nil
 }
 //}
 
@@ -147,26 +147,99 @@ func flags() ([]cli.Flag, error) {
 //list[run-flag-base-after][--baseオプションの修正にあわせたrun()関数]{
 func run(args []string) int {
   ...
-	flags, err := flags()
-	if err != nil {
-		return ExitCodeError
-	}
-	app := cli.NewApp()
-	app.Flags = flags
+  flags, err := flags()
+  if err != nil {
+    return ExitCodeError
+  }
+  app := cli.NewApp()
+  app.Flags = flags
   ...
 }
 //}
 
 
-== ディレクトリの相対的なパス
+オプションのデフォルト値をランタイムで決める方法は、たとえば設定ファイルを読み込む場合などにも使います。
+アプリケーションの設定ファイルを読み込む場所として、ユーザーのホームディレクトリ直下にある@<code>{$HOME/.conf/.fodrc}というファイルをデフォルトにしたいとします。
+ホームディレクトリはもちろんユーザー毎に異なるため、特定の値として決めることができません。
+
+そこでよく取られるアプローチが、@<code>{os/user}パッケージにある機能を利用する方法です。
+これを使うことで、コマンドを実行したユーザーのホームディレクトリを取得することができます。
+現状fodにコンフィグファイルというものは存在しないのですが、ありがちなパターンとして解説したいと思います。
 
 
-== フォルダの最上位階層の扱い
+//list[homedir-os-user][os/userパッケージでホームディレクトリ取得する]{
+user, err := user.Current()
+if err != nil {
+  return err
+}
 
-Unix系のファイルシステムでは、ディレクトリ階層の最上位はただ一つのルートディレクトリとされ、これは"/"というパスで表されます。
-一方、Windows系のシステムでは、システムにマウントされている各ボリュームごとに最上位の階層に分かれていて、それぞれのボリュームに対して"C:"などのドライブレターと呼ばれる名前が付いています。
+conf := filepath.Join(user.HomeDir, ".conf/.fodrc")
+fmt.Println(conf)
+//}
 
 
-== 表示をシステムに合わせて切り替える
+コード@<list>{homedir-os-user}を実行すると、次のような結果となります。
 
-Unix系のシステムであればディレクトリ区切り文字が"/"であり、Windows系の"¥"であることはこれまでも
+//list[output-homedir-os-user][ホームディレクトリを取得した結果]{
+/Users/kandayasu/.conf/.fodrc
+//}
+
+
+しかし、この@<code>{os/file}を使うアプローチには、プラットフォームによる落とし穴があります。
+それはクロスコンパイルが出来なくなってしまうというものです。
+そこで、この問題を解消するために@<code>{mitchellh/go-homedir}というパッケージを使います。@<fn>{go-homedir}
+
+
+//footnote[go-homedir][https://github.com/mitchellh/go-homedir]
+
+
+//list[use-go-homedir][mitchellh/go-homedirを使う]{
+h, err := homedir.Dir()
+if err != nil {
+  t.Fail()
+}
+
+e, err := homedir.Expand("~/.conf/.fodrc")
+if err != nil {
+  t.Fail()
+}
+
+fmt.Println(h)
+fmt.Println(e)
+//}
+
+
+このコードを実行した結果が@<list>{output-use-go-homedir}となります。
+@<code>{os/user}を使った場合と同じようにホームディレクトリのパスを取得したり、チルダをホームディレクトリのパスに展開
+できていますね。
+
+
+//list[output-use-go-homedir][mittchellh/go-homedirを使った結果]{
+/Users/kandayasu
+/Users/kandayasu/.conf/.fodrc
+//}
+
+
+このパッケージの特徴とするところは、先述したクロスコンパイルができなくなるという問題を避けるため、Go言語のみで実装されているという点です。
+（試してはいませんが）Windows系のOSにも対応しているみたいです。
+クロスコンパイルが自由にできれば、手元の開発機でビルドしたバイナリを実行環境にそのまま配布して動作させることもできるでしょう。
+そういった利便性をむやみに損なわないためにも、こうした小技を覚えておくと良いかもしれません。
+
+
+== 本章のまとめ
+
+本章ではfodの中心的な機能であるファイルパスの扱いを見直すといったことを主にやりました。
+単一の実行バイナリやクロスコンパイルなど、Go言語はマルチプラットフォームを意識した作りになっていますが、それでもこのようなところは注意しないとその特性をスポイルしかねません。
+ファイルパスの扱いはプラットフォームごとに異なる部分の代表的なそれ故に注意したい部分となりますが、先人の知恵に従えばそれもずいぶんラクになるでしょう。
+
+本当はWindows環境での場合についていろいろ書きたかったですが、自由に使えるWindowsマシンが手元になかったため、そこは片手落ちとなってしまいました。
+どなたか優しい人がいたら、@<ami>{マサカリを投げる}フィードバックしてくださるとうれしいです。
+
+
+#@# == ディレクトリの相対的なパス
+#@# 
+#@# 
+#@# == フォルダの最上位階層の扱い
+#@# 
+#@# Unix系のファイルシステムでは、ディレクトリ階層の最上位はただ一つのルートディレクトリとされ、これは"/"というパス#@# で表されます。
+#@# 一方、Windows系のシステムでは、システムにマウントされている各ボリュームごとに最上位の階層に分かれていて、それぞ#@# れのボリュームに対して"C:"などのドライブレターと呼ばれる名前が付いています。
