@@ -150,7 +150,7 @@ coverimage: null
 # colophon: null
 
 # 裏表紙ファイル (画像はcoversまたはimagesに配置する)。ファイル名を指定すると裏表紙として入る
-# backcover: null
+# backcover: back.jpg
 
 # プロフィールページファイル。ファイル名を指定すると著者紹介として入る
 # profile: null
@@ -161,7 +161,7 @@ coverimage: null
 # advfile: null
 
 # 取り込む画像が格納されているディレクトリ。省略した場合は以下
-# imagedir: images
+imagedir: images
 
 # 取り込むフォントが格納されているディレクトリ。省略した場合は以下
 # fontdir: fonts

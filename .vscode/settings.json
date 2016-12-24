@@ -1,5 +1,6 @@
 // Place your settings in this file to overwrite default and user settings.
 {
   "editor.wordWrap": true,
-  "editor.wrappingColumn": 300
+  "editor.wrappingColumn": 300,
+  "editor.insertSpaces": true
 }

@@ -92,7 +92,7 @@ help:
 == バイナリのプログラムのファイル名修正
 
 さて、このテンプレートとなるMakefileにあるビルド用のターゲット@<code>{bin/%}は、バイナリプログラムのファイル名がmain.goであることと決められています。
-@<chapref>{lib-and-bin}では@<code>{cmd/fod/fod.go}として、バイナリプログラムのコードを配置しましたが、これはMakefileの定めるところに沿ってはいません。
+@<chapref>{1_lib-and-bin}では@<code>{cmd/fod/fod.go}として、バイナリプログラムのコードを配置しましたが、これはMakefileの定めるところに沿ってはいません。
 そこで、元々のファイル名を修正することで対応します。
 
 
@@ -262,12 +262,12 @@ var (
 )
 
 func versionStr() string {
-	return fmt.Sprintf(
-		"%s version %s revision %s",
-		name,
-		version,
-		revision,
-	)
+  return fmt.Sprintf(
+    "%s version %s revision %s",
+    name,
+    version,
+    revision,
+  )
 }
 //}
 
@@ -386,232 +386,6 @@ go test $(glide novendor)
 ?       github.com/ykanda/fod/cmd/fod   [no test files]
 ?       github.com/ykanda/fod   [no test files] 
 //}
-
-
-
-== lintの結果をもとに警告を修正する
-
-@<hd>{make_practice|lint_and_fmt}では@<code>{make lint}の実行結果により、たくさんの警告が表示されているのを確認しました。
-これらの警告を一つずつ確認して、実際にコードを修正してみましょう。
-
-
-=== ネーミング規則
-
-多くの言語では定数であることを（暗に）表す名前として、アッパースネークケース（Upper Snake Case）@<fn>{upper-snake-case}を使う事は珍しいことではありませんが、Goではこのようなネーミングは推奨されていません。
-@<list>{lint-dont-use-upper-snake-case-in-go}のように、これは警告となって現れ、 キャメルケース（Camel Case）@<fn>{camel-case}を使うように推奨されます。
-
-
-//footnote[upper-snake-case][アルファベットは全て大文字で、単語をアンダースコアでつなぐ方法]
-//footnote[camel-case][TheFunctionなどのように単語の頭文字を大文字とする方法、先頭の単語まで大文字とするのを特にアッパーキャメルケース、小文字とすることをローワーキャメルケースと呼びわけることもある]
-
-
-//list[lint-dont-use-upper-snake-case-in-go][Goでは定数名にキャメルケースを使う]{
-constant.go:4:2: don't use ALL_CAPS in Go names; use CamelCase
-//}
-
-
-これを@<list>{diff-fs-file-type}のように修正しました。
-当然ですが、シンボル名が変わることになるので、この定数を参照している箇所をソースツリー全体から探して新しい名前を利用するように修正する必要があります。
-
-
-//list[diff-fs-file-type][定数名の修正]{
-const (
--       FS_TYPE_FILE    = "f"
--       FS_TYPE_DIR     = "d"
--       FS_TYPE_SYMLINK = "s"
-+       FsTypeFile    = "f"
-+       FsTypeDir     = "d"
-+       FsTypeSymlink = "s"
-)
-//}
-
-
-=== 公開される名前とコメント
-
-
-Goでは大文字から始まるシンボルはパッケージの利用者に対して公開されるものとして扱われます。
-公開されるシンボルについてコメントが無い場合、コメントを書くか非公開のシンボルとするように促されます。（@<list>{lint-exported-symbol-should-have-comment}）
-
-
-//list[lint-exported-symbol-should-have-comment][公開シンボルにコメントを記述するように促す警告]{
-context.go:24:1: exported method AppContext.Multi should have comment or be unexported
-entry.go:9:6: exported type Entry should have comment or be unexported
-//}
-
-
-また、公開されるシンボルについてのコメントは、そのシンボル名から始まるようにすることが推奨されています。
-
-
-//list[lint-exported-symbol-comment-form][公開シンボルのコメントの書式についての警告]{
-filter_directory.go:10:1: comment on exported function DirectoryFilterSingleton should be of the form "DirectoryFilterSingleton ..."
-context.go:5:1: comment on exported type AppContext should be of the form "AppContext ..." (with optional leading article)
-filter_dotfile.go:38:1: comment on exported method DotfileFilter.Toggle should be of the form "Toggle ..."
-//}
-
-
-これらを踏まえて、修正を施してみましょう。
-ここでは、警告がでている箇所に対して次のいずれかの方法で対応します。
-fodはライブラリとしての性質も備えているため、警告の一つ一つに対してどの方法を適用するかを判断する必要があります。
-
-
-  * 公開する必要のないものは非公開のシンボルとなるようにする
-  * 公開する必要のあるものは、適切なコメントを加えるようにする
-
-
-たとえば、@<code>{fod.AppContext}というstructがありますが、これは外部のプログラム（/cmd/fodなどがその例）から利用されているため、公開されるシンボルとしなければなりません。
-そのため、適切なコメントとなるように修正します。
-
-
-//list[lint-fix-comment-appcontext][]{
--// extends cli.Context
-+// AppContext extends cli.Context
-type AppContext struct {
- 	*cli.Context
-}
-//}
-
-
-lintによる警告を避けるためだけの簡易な修正となっていますが、コメントの意義を考えるのであればもう少し説明的な内容があった方が良いと思います。
-
-そして次の例が、@<code>{DotfileFilter.Toggle()}のメソッド名を修正することで非公開であることを示すものです。
-このメソッドはひとまずライブラリの外部に露出させない
-
-
-=== レシーバの名前
-
-「レシーバの名前にジェネリックな名前は使うな、その特性を反映した名前にしろ」ということのようです。
-「名前重要」というのはプログラマに広く認識されたベタープラクティスの一つというのは疑いのないものでしょうから、警告にしたがって修正してみましょう。
-
-
-//list[lint-receiver-name][レシーバ名に関する警告]{
-selector.go:181:1: receiver name should be a reflection of its identity; don't use generic names such as "me", "this", or "self"
-//}
-
-
-たとえば、@<list>{move-cursor-up-before}関数はファイル選択カーソルの位置を変更するための関数です。
-
-
-//list[move-cursor-up-before][レシーバ名修正前の関数]{
-func (self *SelectorCommon) MoveCursorUp() {
-	if self.Cursor > 0 {
-		self.Cursor--
-	}
-}
-//}
-
-
-これを@<list>{move-cursor-up-after}のように修正しました。
-
-
-//list[move-cursor-up-after][レシーバ名修正後の関数]{
-func (selector *SelectorCommon) MoveCursorUp() {
-	if selector.Cursor > 0 {
-		selector.Cursor--
-	}
-}
-//}
-
-
-これまでのselfよりは冗長になりましたが、レシーバが具体的にどんなオブジェクトなのかということが具体的に分かりやすくなりました。
-また、直してみると分かるのですが、@<code>{self.Hoge}などと書くとオブジェクト自身のHogeなんだな、という風に見えてしまいますが、レシーバ名が具体的になることによって、そのフィールドは本当にそのレシーバに持たせるのが適当なのか？という不自然さに気づくことがあります。
-コードの良くないにおいに早期に気づけるようにするという意味で、レシーバの名前を具体的なものとすることは良いプラクティスといえるのではないでしょうか。
-
-
-//note{
-Go言語のソースコードを見ていると、十分に短い関数にシンプルな（時として一文字などもある）変数名を使うという風潮があるように思います。
-カルチャーとしては良いのですが、これが時たま好ましくない形であらわれているのを目にします。
-たとえば、省略することにこだわるあまり、意図を損ねかねない形になってしまっていることもあります（適当な名前付けで怒られている自分が言うのもおかしな話しですが）。
-
-*SelectorCommon型のレシーバの名前にselとつけるよりは、selectorと書いてしまった方が具体的だと思うのです。
-また、一文字単語も名前の重複が発生するような場合は少し気まずいことになってしまいます。
-同じスコープの中にselectorとswitcherという要素があった場合に、単純にsと略すと名前がかぶってしまいますね。
-//}
-
-
-=== varキーワードによる変数宣言時の初期値　
-
-//list[lint-var-zero-value][]{
-entry.go:31:20: should drop = "" from declaration of var abs; it is the zero value
-//}
-
-
-=== 不要な型名
-
-
-//list[lint-should-omit-type][]{
-filter_directory.go:8:21: should omit type *DirectoryFilter from declaration of var directoryFilter; it will be inferred from the right-hand side
-//}
-
-
-=== return文とelse節のイディオム
-
-//list[lint-][else節に関する警告]{
-selector.go:313:9: if block ends with a return statement, so drop this else and outdent its block (move short variable declaration to its own line if necessary)
-termbox.go:37:9: if block ends with a return statement, so drop this else and outdent its block
-//}
-
-
-=== rangeを使ったループの冗長な記述
-
-Golangでコレクション的な要素（array,slice,mapなど）に対してfor文で横断的に処理を刷る場合、rangeを用います。
-rangeはキーまたはインデックスと値の二つの値を返し、それを受け取るときには@<code>{インデックス, 値 := range}などのように書きます（map型などの場合はインデックスはキーになります）。
-しかし、書き方によっては警告が発せられます。
-
-
-//list[lint-range-omit-2nd-value][forループで無視される値についての警告]{
-selector.go:364:9: should omit 2nd value from range; this loop is equivalent to `for i := range ...`
-//}
-
-
-このような場面で、値には用がないがインデックスを使いたい場合、値の部分は省略するのが良いそうです。
-全体的に、余計なものは書かないようにしようという方向で訂正される感じでしょうか。
-
-
-//list[lint-range-omit-2nd-value-diff][値を使わない場合にはわざわざアンダースコアを書かない]{
- func (selector *SelectorCommon) SetItem(path string, index int) {
--       for i, _ := range selector.Entries {
-+       for i := range selector.Entries {
-                selector.Entries[i].Marked = false
-        }
-        entries := selector.GetEntries()
-//}
-
-
-Go言語をたしなんでいる人には言うまでもありませんが、インデックスは使わずに値のみを使いたい場合は@<code>{_, 値 := range}という形でインデックスを無視でき、このときはアンダースコアを省けません。
-
-
-=== インクリメント演算子を使う
-
-インクリメント操作を行う場合には、複合代入演算子@<code>{+=}を用いるのではなく、インクリメント演算子を持ちいることが推奨されています。（@<list>{lint-should-replace-increment-op}）
-
-
-//list[lint-should-replace-increment-op][複合代入演算子を使うことによる警告]{
-termbox.go:29:30: should replace i += 1 with i++
-//}
-
-
-言われたままに、次のように修正します。
-まあ、こちらの方がシンプルでよりGoが是とするものに近いといったことなのでしょうか？
-
-
-//list[lint-should-replace-increment-op-diff][インクリメント文を使うよう修正する]{
- func drawString(x int, y int, text string, fgColor termbox.Attribute, bgColor termbox.Attribute) {
-        runes := []rune(text)
--       for i := 0; i < len(runes); i += 1 {
-+       for i := 0; i < len(runes); i++ {
-                termbox.SetCell(x+i, y, runes[i], fgColor, bgColor)
-        }
- }
-//}
-
-
-この違いの是非はともかくとして、この差分には意味合いの違いがあります。
-それは@<code>{+=}が演算子である一方、@<code>{++}は文（ステートメント）であるということです。
-@<code>{++}は「型を持たない定数1によってオペランドを加算する」という意味で解釈されます。
-しかし、実際に評価されると結果としては変わらないようです。@<fn>{why-use-inc-stmt}
-
-
-//footnote[why-use-inc-stmt][なんでこれが推奨されるか良く分からなくてオフィシャルを調べたけど結局良くわからなかったので誰か教えてください（時間がなくてひよってきてる）]
 
 
 == この章のまとめ
