@@ -185,10 +185,10 @@ page_metric: B5
 #
 # あるいは、配列で指定することもできる
 # 各数字の意味は、順にリストの行数、リストの1行字数、テキストの行数、テキストの1行字数、1kバイト毎のページ数
-# page_metric: [40,80,40,80,2]
+# page_metric: [60,100,60,100,2]
 
 # ページ送りの送り方向、page-progression-directionの値("ltr"|"rtl"|"default")
-# direction: "ltr"
+direction: "ltr"
 
 # EPUBのOPFへの固有の追加ルール
 # <package>要素に追加する名前空間
@@ -276,7 +276,7 @@ epubmaker:
 texstyle: reviewmacro
 #
 # LaTeX用のdocumentclassを指定する
-texdocumentclass: ["jsbook", "uplatex,10ptj"]
+texdocumentclass: ["jsbook", "uplatex,10pt,b5j"]
 # textdocumentclass: ["jsbook", "b5j"]
 #
 # LaTeX用のコマンドを指定する
